@@ -14,7 +14,7 @@ export default function DappLayout({
         <footer className="py-6 md:px-8 md:py-0">
           <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
             <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-              Built with Firebase Studio. This is a prototype. Do not use with real funds.
+              
             </p>
           </div>
         </footer>
