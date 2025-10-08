@@ -20,3 +20,5 @@ export type DashboardData = {
   totalMaticCollected: number;
   recentPurchases: Purchase[];
 };
+
+export type { LivePrices } from '@/ai/flows/fetch-live-prices';

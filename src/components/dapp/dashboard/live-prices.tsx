@@ -2,11 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { FetchLivePricesOutput } from "@/ai/flows/fetch-live-prices";
+import type { LivePrices as LivePricesType } from "@/ai/flows/fetch-live-prices";
 import { Activity } from "lucide-react";
 
 type LivePricesProps = {
-  prices: FetchLivePricesOutput | null;
+  prices: LivePricesType | null;
   loading: boolean;
 };
 

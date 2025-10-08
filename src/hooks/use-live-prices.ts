@@ -1,34 +1,42 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLivePrices, type FetchLivePricesOutput } from '@/ai/flows/fetch-live-prices';
+import { fetchLivePrices, type LivePrices } from "@/ai/flows/fetch-live-prices";
 
-export function useLivePrices(refreshInterval: number = 60000) {
-  const [prices, setPrices] = useState<FetchLivePricesOutput | null>(null);
+export function useLivePrices(refreshMs = 60000) {
+  const [prices, setPrices] = useState<LivePrices | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const getPrices = async () => {
+    let cancelled = false;
+
+    async function load() {
       try {
         setLoading(true);
-        const livePrices = await fetchLivePrices();
-        setPrices(livePrices);
-        setError(null);
-      } catch (e) {
-        setError('Could not fetch live prices. Please try again later.');
-        console.error(e);
+        const fetchedPrices = await fetchLivePrices();
+        if (!cancelled) {
+          setPrices(fetchedPrices);
+          setError(null);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message ?? "Failed to load prices");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    }
+
+    load();
+    const id = setInterval(load, refreshMs);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
     };
-
-    getPrices(); // Initial fetch
-
-    const intervalId = setInterval(getPrices, refreshInterval);
-
-    return () => clearInterval(intervalId);
-  }, [refreshInterval]);
+  }, [refreshMs]);
 
   return { prices, loading, error };
 }

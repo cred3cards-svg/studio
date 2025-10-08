@@ -3,12 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DashboardData } from "@/types";
-import type { FetchLivePricesOutput } from "@/ai/flows/fetch-live-prices";
+import type { LivePrices } from "@/ai/flows/fetch-live-prices";
 import { Users, DollarSign } from "lucide-react";
 
 type KpiCardsProps = {
   data: DashboardData | null;
-  prices: FetchLivePricesOutput | null;
+  prices: LivePrices | null;
   loading: boolean;
 };
 
