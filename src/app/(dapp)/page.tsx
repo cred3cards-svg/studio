@@ -181,6 +181,24 @@ export default function HomePage() {
             </CardContent>
           </Card>
         </section>
+        
+        {/* Investor Protections */}
+        <section>
+            <h2 className="text-3xl font-bold text-center mb-8 font-headline">Investor Protections</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {investorProtections.map((protection) => (
+                    <Card key={protection.title}>
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            <Shield className="w-8 h-8 text-primary" />
+                            <CardTitle className="text-xl">{protection.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">{protection.description}</p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </section>
 
         {/* Investor Returns & Reserve Structure */}
         <section className="grid md:grid-cols-2 gap-8">
