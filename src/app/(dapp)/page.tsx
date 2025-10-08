@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, ShoppingCart, TrendingUp, Shield, BarChart, Milestone, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowRight, ShoppingCart, TrendingUp, Shield, BarChart, Milestone, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
