@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, Info, Loader2, ShoppingCart, Wallet, XCircle } from 'lucide-react';
+import { CheckCircle, Info, Loader2, ShoppingCart, Wallet, XCircle, AlertTriangle } from 'lucide-react';
 import { INRTX_PRICE_USD, MAX_PURCHASE_AMOUNT, MIN_PURCHASE_AMOUNT, POLYGON_CHAIN_ID } from '@/lib/constants';
 import { buyWithMatic, buyWithUSDT } from '@/lib/contracts';
 import { useToast } from '@/hooks/use-toast';
