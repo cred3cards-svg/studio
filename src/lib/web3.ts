@@ -11,7 +11,7 @@ if (!projectId) throw new Error('Project ID is not defined')
 const metadata = {
   name: 'INRTX Reserve DApp',
   description: 'Sale DApp for INRTX-reserve token on Polygon.',
-  url: 'https://inrtx.com', // origin must match your domain & subdomain
+  url: 'https://3-3dbeb.us-central1.hosted.app', // must match allowlisted domain
   icons: ['https://avatars.githubusercontent.com/u/37784886']
 }
 
