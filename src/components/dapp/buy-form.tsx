@@ -32,7 +32,7 @@ export function BuyForm() {
   const { switchChain } = useSwitchChain();
 
   const { data: maticBalance } = useBalance({ address, chainId: chain?.id });
-  const { data: usdtBalance } = useBalance({ address, chainId: chain?.id, token: USDT_ADDRESS as `0x${string}` });
+  const { data: usdtBalance } = useBalance({ address, chainId: chain?.id, token: USDT_ADDRESS });
 
 
   const [amount, setAmount] = useState(1);
@@ -86,6 +86,9 @@ export function BuyForm() {
 
     try {
       let hash;
+      if (!chain?.id) {
+        throw new Error('Chain ID not available');
+      }
       const chainId = chain.id;
       if (paymentMethod === 'USDT') {
         hash = await buyWithUSDT(firestore, amount, usdtAmount, address, chainId);
