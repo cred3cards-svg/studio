@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { useLivePrices } from '@/hooks/use-live-prices';
+import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ export function BuyForm() {
   const { address, chainId, connectWallet, maticBalance, usdtBalance, user } = useWallet();
   const { prices, loading: pricesLoading } = useLivePrices();
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const [amount, setAmount] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('USDT');
@@ -53,8 +55,9 @@ export function BuyForm() {
   const canPurchase = address && !isWrongNetwork && amount >= MIN_PURCHASE_AMOUNT && amount <= MAX_PURCHASE_AMOUNT && hasSufficientBalance() && user;
 
   const handleBuy = async () => {
-    if (!canPurchase) {
-      if (!address) toast({ title: 'Please connect your wallet first.', variant: 'destructive' });
+    if (!canPurchase || !firestore) {
+      if (!firestore) toast({ title: 'Database not available.', variant: 'destructive' });
+      else if (!address) toast({ title: 'Please connect your wallet first.', variant: 'destructive' });
       else if (isWrongNetwork) toast({ title: 'Please switch to Polygon network.', variant: 'destructive' });
       else if (!hasSufficientBalance()) toast({ title: 'Insufficient balance.', variant: 'destructive' });
       return;
@@ -67,9 +70,9 @@ export function BuyForm() {
     try {
       let hash;
       if (paymentMethod === 'USDT') {
-        hash = await buyWithUSDT(amount, usdtAmount, address, chainId!);
+        hash = await buyWithUSDT(firestore, amount, usdtAmount, address, chainId!);
       } else {
-        hash = await buyWithMatic(amount, maticAmount, address, chainId!);
+        hash = await buyWithMatic(firestore, amount, maticAmount, address, chainId!);
       }
       setTxHash(hash);
       setPurchaseState('success');

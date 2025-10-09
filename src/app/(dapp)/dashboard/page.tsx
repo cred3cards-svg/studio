@@ -1,54 +1,76 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { collection, query, orderBy } from 'firebase/firestore';
 import { KpiCards } from "@/components/dapp/dashboard/kpi-cards";
 import { RecentPurchases } from "@/components/dapp/dashboard/recent-purchases";
 import { SaleProgress } from "@/components/dapp/dashboard/sale-progress";
 import { LivePrices } from "@/components/dapp/dashboard/live-prices";
-import { getDashboardData } from "@/lib/firestore";
+import { useFirestore, useCollection, WithId } from "@/firebase";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import type { DashboardData } from "@/types";
-import { useWallet } from "@/hooks/use-wallet";
+import type { Purchase } from "@/types";
+
+type DashboardData = {
+  totalTokensSold: number;
+  totalBuyers: number;
+  totalUsdtCollected: number;
+  totalMaticCollected: number;
+};
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { prices, loading: pricesLoading } = useLivePrices();
-  const { user } = useWallet();
+  const firestore = useFirestore();
+  
+  const purchasesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "purchases"), orderBy("createdAt", "desc"));
+  }, [firestore]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const dashboardData = await getDashboardData();
-        setData(dashboardData);
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
+  const { data: purchases, isLoading: purchasesLoading, error } = useCollection<Purchase>(purchasesQuery);
+
+  const dashboardData = useMemo<DashboardData | null>(() => {
+    if (!purchases) return null;
+
+    let totalTokensSold = 0;
+    let totalUsdtCollected = 0;
+    let totalMaticCollected = 0;
+    const buyers = new Set<string>();
+
+    purchases.forEach((p) => {
+      totalTokensSold += p.tokensRequested;
+      buyers.add(p.wallet);
+      if (p.paymentToken === 'USDT') {
+        totalUsdtCollected += p.currencyAmountPaid;
+      } else {
+        totalMaticCollected += p.currencyAmountPaid;
       }
+    });
+
+    return {
+      totalTokensSold,
+      totalBuyers: buyers.size,
+      totalUsdtCollected,
+      totalMaticCollected,
     };
-    
-    // Fetch data initially, and then set up a poller to refresh
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [user]); // Refetch if user changes, e.g., on purchase
+  }, [purchases]);
+
+  const { prices, loading: pricesLoading } = useLivePrices();
+  
+  const loading = purchasesLoading || !dashboardData;
+  const recentPurchases = useMemo(() => purchases?.slice(0, 10) || null, [purchases]);
 
   return (
     <div className="container py-8 md:py-12">
       <div className="space-y-8">
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <SaleProgress data={data} loading={loading} />
+            <SaleProgress data={dashboardData} loading={loading} />
           </div>
           <LivePrices prices={prices} loading={pricesLoading} />
         </div>
         
-        <KpiCards data={data} prices={prices} loading={loading || pricesLoading} />
+        <KpiCards data={dashboardData} prices={prices} loading={loading || pricesLoading} />
         
-        <RecentPurchases purchases={data?.recentPurchases || null} loading={loading} />
+        <RecentPurchases purchases={recentPurchases} loading={loading} />
       </div>
     </div>
   );

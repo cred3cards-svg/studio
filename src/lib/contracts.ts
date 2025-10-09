@@ -1,6 +1,7 @@
 import { addPurchase } from './firestore';
 import { Purchase } from '@/types';
 import type { EIP1193Provider } from '@/types/web3';
+import { Firestore } from 'firebase/firestore';
 
 // Minimal ERC-20 ABI for balanceOf and decimals
 export const USDT_ABI = [
@@ -22,7 +23,7 @@ export const USDT_ABI = [
 
 
 // Placeholder function to simulate buying with USDT
-export const buyWithUSDT = async (amountTokens: number, usdtAmount: number, walletAddress: string, chainId: number): Promise<string> => {
+export const buyWithUSDT = async (db: Firestore, amountTokens: number, usdtAmount: number, walletAddress: string, chainId: number): Promise<string> => {
   console.log(`Simulating buyWithUSDT: ${amountTokens} tokens for ${usdtAmount} USDT`);
 
   // TODO: Implement real smart contract interaction
@@ -44,12 +45,12 @@ export const buyWithUSDT = async (amountTokens: number, usdtAmount: number, wall
     txHash: fakeTxHash,
   } as Omit<Purchase, 'id' | 'createdAt'>;
 
-  await addPurchase(purchaseData);
+  await addPurchase(db, purchaseData);
   return fakeTxHash;
 };
 
 // Placeholder function to simulate buying with POL/MATIC
-export const buyWithMatic = async (amountTokens: number, maticAmount: number, walletAddress: string, chainId: number): Promise<string> => {
+export const buyWithMatic = async (db: Firestore, amountTokens: number, maticAmount: number, walletAddress: string, chainId: number): Promise<string> => {
   console.log(`Simulating buyWithMatic: ${amountTokens} tokens for ${maticAmount} MATIC`);
 
   // TODO: Implement real smart contract interaction
@@ -70,7 +71,7 @@ export const buyWithMatic = async (amountTokens: number, maticAmount: number, wa
     txHash: fakeTxHash,
   } as Omit<Purchase, 'id' | 'createdAt'>;
 
-  await addPurchase(purchaseData);
+  await addPurchase(db, purchaseData);
   return fakeTxHash;
 };
 

@@ -1,9 +1,7 @@
-import { db } from './firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit, Firestore } from 'firebase/firestore';
 import type { Purchase, DashboardData } from '@/types';
-import { SALE_CAP } from './constants';
 
-export async function addPurchase(purchaseData: Omit<Purchase, 'id' | 'createdAt'>) {
+export async function addPurchase(db: Firestore, purchaseData: Omit<Purchase, 'id' | 'createdAt'>) {
   try {
     await addDoc(collection(db, 'purchases'), {
       ...purchaseData,
@@ -11,11 +9,12 @@ export async function addPurchase(purchaseData: Omit<Purchase, 'id' | 'createdAt
     });
   } catch (error) {
     console.error('Error adding document: ', error);
+    // In a real app, you'd want to handle this more gracefully
     throw new Error('Failed to save purchase to database.');
   }
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(db: Firestore): Promise<DashboardData> {
   const purchasesCol = collection(db, 'purchases');
   const q = query(purchasesCol, orderBy('createdAt', 'desc'));
   const querySnapshot = await getDocs(q);
@@ -27,20 +26,20 @@ export async function getDashboardData(): Promise<DashboardData> {
   const recentPurchases: Purchase[] = [];
 
   querySnapshot.forEach((doc) => {
-    const data = doc.data() as Purchase;
-    data.id = doc.id;
+    const data = doc.data() as Omit<Purchase, 'id'>;
+    const purchaseWithId: Purchase = { ...data, id: doc.id };
     
-    totalTokensSold += data.tokensRequested;
-    buyers.add(data.wallet);
+    totalTokensSold += purchaseWithId.tokensRequested;
+    buyers.add(purchaseWithId.wallet);
 
-    if (data.paymentToken === 'USDT') {
-      totalUsdtCollected += data.currencyAmountPaid;
+    if (purchaseWithId.paymentToken === 'USDT') {
+      totalUsdtCollected += purchaseWithId.currencyAmountPaid;
     } else {
-      totalMaticCollected += data.currencyAmountPaid;
+      totalMaticCollected += purchaseWithId.currencyAmountPaid;
     }
     
     if (recentPurchases.length < 10) {
-      recentPurchases.push(data);
+      recentPurchases.push(purchaseWithId);
     }
   });
 

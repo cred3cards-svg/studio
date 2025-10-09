@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { signInAnonymously, type User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { POLYGON_CHAIN_ID, POLYGON_CHAIN_ID_HEX, USDT_ADDRESS } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import type { EIP1193Provider } from '@/types/web3';
@@ -24,12 +24,13 @@ interface WalletState {
 export const WalletContext = createContext<WalletState | null>(null);
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
+  const auth = useAuth();
   const [provider, setProvider] = useState<EIP1193Provider | null>(null);
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [maticBalance, setMaticBalance] = useState<number | null>(null);
   const [usdtBalance, setUsdtBalance] = useState<number | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -63,7 +64,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
     }
-  }, [updateBalances]);
+  }, [updateBalances, auth]);
 
   const handleChainChanged = (newChainId: string) => {
     setChainId(parseInt(newChainId, 16));
@@ -75,7 +76,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setMaticBalance(null);
     setUsdtBalance(null);
     setUser(null);
-    auth.signOut();
+    if (auth) {
+      auth.signOut();
+    }
     toast({ title: "Wallet Disconnected" });
   };
 
@@ -96,7 +99,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       const accounts = await currentProvider.request({ method: 'eth_requestAccounts' });
       const currentChainId = await currentProvider.request({ method: 'eth_chainId' });
       
-      handleAccountsChanged(accounts);
+      await handleAccountsChanged(accounts);
       handleChainChanged(currentChainId);
 
       if(parseInt(currentChainId, 16) !== POLYGON_CHAIN_ID) {
@@ -166,11 +169,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
       currentProvider.on('chainChanged', handleChainChanged);
 
       return () => {
-        currentProvider.removeListener('accountsChanged', handleAccountsChanged);
-        currentProvider.removeListener('chainChanged', handleChainChanged);
+        if (currentProvider.removeListener) {
+          currentProvider.removeListener('accountsChanged', handleAccountsChanged);
+          currentProvider.removeListener('chainChanged', handleChainChanged);
+        }
       };
     }
   }, [handleAccountsChanged]);
+  
+  useEffect(() => {
+    if (auth) {
+      const unsubscribe = auth.onAuthStateChanged(setUser);
+      return unsubscribe;
+    }
+  }, [auth]);
 
   useEffect(() => {
     if (provider && address) {
