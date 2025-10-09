@@ -1,26 +1,20 @@
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { collection, query, orderBy } from 'firebase/firestore';
 import { KpiCards } from "@/components/dapp/dashboard/kpi-cards";
 import { RecentPurchases } from "@/components/dapp/dashboard/recent-purchases";
 import { SaleProgress } from "@/components/dapp/dashboard/sale-progress";
 import { LivePrices } from "@/components/dapp/dashboard/live-prices";
-import { useFirestore, useCollection, WithId } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import type { Purchase } from "@/types";
+import type { Purchase, DashboardData } from "@/types";
 
-type DashboardData = {
-  totalTokensSold: number;
-  totalBuyers: number;
-  totalUsdtCollected: number;
-  totalMaticCollected: number;
-};
 
 export default function DashboardPage() {
   const firestore = useFirestore();
   
-  const purchasesQuery = useMemo(() => {
+  const purchasesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, "purchases"), orderBy("createdAt", "desc"));
   }, [firestore]);
@@ -50,6 +44,7 @@ export default function DashboardPage() {
       totalBuyers: buyers.size,
       totalUsdtCollected,
       totalMaticCollected,
+      recentPurchases: [] // This will be populated by the other component
     };
   }, [purchases]);
 
