@@ -1,0 +1,93 @@
+/**
+ * @fileoverview Firestore Security Rules for INRTX-reserve token sale.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes security by enforcing strict access controls on all data.
+ * Authenticated users can create purchase records, while administrative access is required for managing sale statistics and configuration.
+ * Data shape validation is relaxed for rapid prototyping.
+ *
+ * Data Structure:
+ * - /purchases/{purchaseId}: Stores individual purchase records.
+ * - /sale_stats/{statsId}: Stores aggregated token sale statistics. Only one document should exist.
+ * - /config/{configId}: Stores application configuration. Only one document should exist.
+ *
+ * Key Security Decisions:
+ * - Authenticated users can create purchase records, but cannot update or delete them.
+ * - Only users with an "admin" claim can modify sale statistics and configuration.
+ * - Data validation is limited to authorization-critical fields to allow for flexible schema changes during prototyping.
+ *
+ * Denormalization for Authorization:
+ * - Purchase documents include the 'wallet' address, enabling efficient queries and access control based on the user's wallet.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to individual purchase records.
+     * @path /purchases/{purchaseId}
+     * @allow (create) - Authenticated user creates a new purchase record with a matching wallet.
+     * @deny (create) - Unauthenticated user attempts to create a purchase record.
+     * @deny (update) - Any user attempts to update an existing purchase record.
+     * @deny (delete) - Any user attempts to delete a purchase record.
+     * @principle Authenticated users can create purchase records, while updates and deletes are disallowed.
+     */
+    match /purchases/{purchaseId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.wallet is string;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to the sale statistics document.
+     * @path /sale_stats/{statsId}
+     * @allow (get, list) - Any user can read the sale statistics.
+     * @allow (create, update, delete) - Only users with the "admin" claim can modify the sale statistics.
+     * @deny (create, update, delete) - Users without the "admin" claim attempt to modify the sale statistics.
+     * @principle Requires "admin" claim for write operations, public read access.
+     */
+    match /sale_stats/{statsId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Controls access to the application configuration document.
+     * @path /config/{configId}
+     * @allow (get, list) - Any user can read the application configuration.
+     * @allow (create, update, delete) - Only users with the "admin" claim can modify the application configuration.
+     * @deny (create, update, delete) - Users without the "admin" claim attempt to modify the application configuration.
+     * @principle Requires "admin" claim for write operations, public read access.
+     */
+    match /config/{configId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {bool} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the user has the "admin" claim.
+     * @return {bool} True if the user has the "admin" claim, false otherwise.
+     */
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

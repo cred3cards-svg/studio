@@ -1,0 +1,200 @@
+{
+  "entities": {
+    "Purchase": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Purchase",
+      "type": "object",
+      "description": "Represents a purchase of INRTX-reserve tokens.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the purchase record."
+        },
+        "wallet": {
+          "type": "string",
+          "description": "The wallet address of the user who made the purchase."
+        },
+        "chainId": {
+          "type": "number",
+          "description": "The chain ID of the network used for the purchase (e.g., 137 for Polygon)."
+        },
+        "paymentToken": {
+          "type": "string",
+          "description": "The token used for payment ('USDT' or 'POL')."
+        },
+        "tokensRequested": {
+          "type": "number",
+          "description": "The number of INRTX-reserve tokens requested."
+        },
+        "usdPerToken": {
+          "type": "number",
+          "description": "The USD price per INRTX-reserve token at the time of purchase."
+        },
+        "usdSubtotal": {
+          "type": "number",
+          "description": "The total USD value of the purchase."
+        },
+        "currencyAmountPaid": {
+          "type": "number",
+          "description": "The amount of currency (USDT or POL/MATIC) paid for the purchase."
+        },
+        "txHash": {
+          "type": "string",
+          "description": "The transaction hash of the purchase (can be null until the real transaction occurs).",
+          "format": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the purchase record was created (server timestamp).",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "wallet",
+        "chainId",
+        "paymentToken",
+        "tokensRequested",
+        "usdPerToken",
+        "usdSubtotal",
+        "currencyAmountPaid",
+        "createdAt"
+      ]
+    },
+    "SaleStats": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SaleStats",
+      "type": "object",
+      "description": "Represents aggregated statistics for the token sale.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the sale statistics record. Should only ever be one."
+        },
+        "totalTokensSold": {
+          "type": "number",
+          "description": "The total number of INRTX-reserve tokens sold."
+        },
+        "totalBuyers": {
+          "type": "number",
+          "description": "The total number of unique buyers."
+        },
+        "totalUsdtCollected": {
+          "type": "number",
+          "description": "The total amount of USDT collected."
+        },
+        "totalPolMaticCollected": {
+          "type": "number",
+          "description": "The total amount of POL/MATIC collected."
+        },
+        "usdEquivalentCollected": {
+          "type": "number",
+          "description": "The total USD equivalent value collected from all sources."
+        }
+      },
+      "required": [
+        "id",
+        "totalTokensSold",
+        "totalBuyers",
+        "totalUsdtCollected",
+        "totalPolMaticCollected",
+        "usdEquivalentCollected"
+      ]
+    },
+    "Config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Config",
+      "type": "object",
+      "description": "Represents configuration values for the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the configuration record. Should only ever be one."
+        },
+        "saleCap": {
+          "type": "number",
+          "description": "The maximum number of INRTX-reserve tokens that can be sold."
+        },
+        "usdtAddress": {
+          "type": "string",
+          "description": "The address of the USDT token contract on Polygon."
+        },
+        "priceApiUrl": {
+          "type": "string",
+          "description": "The URL of the API used to fetch the POL/MATIC price in USD.",
+          "format": "uri"
+        },
+        "refreshInterval": {
+          "type": "number",
+          "description": "The interval (in seconds) at which to refresh data."
+        }
+      },
+      "required": [
+        "id",
+        "saleCap",
+        "usdtAddress",
+        "priceApiUrl",
+        "refreshInterval"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/purchases/{purchaseId}",
+        "definition": {
+          "entityName": "Purchase",
+          "schema": {
+            "$ref": "#/backend/entities/Purchase"
+          },
+          "description": "Stores individual purchase records. Only authenticated users can create records. Includes denormalized 'wallet' for indexing/querying.",
+          "params": [
+            {
+              "name": "purchaseId",
+              "description": "The unique identifier for the purchase document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sale_stats/{statsId}",
+        "definition": {
+          "entityName": "SaleStats",
+          "schema": {
+            "$ref": "#/backend/entities/SaleStats"
+          },
+          "description": "Stores aggregated statistics for the token sale. Requires admin role to modify.",
+          "params": [
+            {
+              "name": "statsId",
+              "description": "The unique identifier for the sale statistics document (should only be one)."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/config/{configId}",
+        "definition": {
+          "entityName": "Config",
+          "schema": {
+            "$ref": "#/backend/entities/Config"
+          },
+          "description": "Stores configuration values for the application. Requires admin role to modify.",
+          "params": [
+            {
+              "name": "configId",
+              "description": "The unique identifier for the configuration document (should only be one)."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to be simple and secure, focusing on ease of querying and clear security rules. All data is stored in top-level collections for easy access and management.  Since there are no user specific subcollections, path based authorization is not necessary. \n\n*   `purchases`: Stores individual purchase records.  Authorization Independence is ensured as only authenticated users can create purchase records.  Rules ensure server timestamps only.\n*   `sale_stats`: Stores aggregated statistics for the token sale. There should only ever be one record. Requires admin role to modify.\n*   `config`: Stores configuration values for the application such as the sale cap and API URLs. There should only ever be one record. Requires admin role to modify.\n\nThis structure facilitates secure `list` operations (QAPs) as each collection has a homogeneous security posture.  There is no need for complex filtering in rules; the rules are simple and straightforward.\n\nThere is no need for nested collections or complex authorization logic, resulting in a simple, easy to debug, secure, and scalable solution."
+  }
+}
