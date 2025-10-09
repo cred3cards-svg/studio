@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useWallet } from '@/hooks/use-wallet';
+import { useState, useEffect } from 'react';
+import { useAccount, useBalance, useSwitchChain } from 'wagmi';
 import { useLivePrices } from '@/hooks/use-live-prices';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,19 +12,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, Info, Loader2, ShoppingCart, Wallet, XCircle, AlertTriangle } from 'lucide-react';
-import { INRTX_PRICE_USD, MAX_PURCHASE_AMOUNT, MIN_PURCHASE_AMOUNT, POLYGON_CHAIN_ID } from '@/lib/constants';
+import { INRTX_PRICE_USD, MAX_PURCHASE_AMOUNT, MIN_PURCHASE_AMOUNT, USDT_ADDRESS } from '@/lib/constants';
 import { buyWithMatic, buyWithUSDT } from '@/lib/contracts';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { polygon } from 'wagmi/chains';
 
 type PaymentMethod = 'USDT' | 'MATIC';
 type PurchaseState = 'idle' | 'processing' | 'success' | 'error';
 
 export function BuyForm() {
-  const { address, chainId, connectWallet, maticBalance, usdtBalance, user } = useWallet();
+  const { open } = useWeb3Modal();
+  const { address, chain } = useAccount();
+  const { user } = useUser();
   const { prices, loading: pricesLoading } = useLivePrices();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { switchChain } = useSwitchChain();
+
+  const { data: maticBalance } = useBalance({ address, chainId: chain?.id });
+  const { data: usdtBalance } = useBalance({ address, chainId: chain?.id, token: USDT_ADDRESS as `0x${string}` });
+
 
   const [amount, setAmount] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('USDT');
@@ -32,7 +41,7 @@ export function BuyForm() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isWrongNetwork = address && chainId !== POLYGON_CHAIN_ID;
+  const isWrongNetwork = address && chain?.id !== polygon.id;
   const usdTotal = amount * INRTX_PRICE_USD;
   const maticPrice = prices?.maticUsd || 0;
   const maticAmount = maticPrice > 0 ? usdTotal / maticPrice : 0;
@@ -48,17 +57,25 @@ export function BuyForm() {
   
   const hasSufficientBalance = () => {
     const balance = getBalance();
+    if (!balance) return false;
     const required = getRequiredAmount();
-    return balance !== null && balance >= required;
+    // Using parseFloat because wagmi balance value is a string with decimals
+    return parseFloat(balance.formatted) >= required;
   };
   
   const canPurchase = address && !isWrongNetwork && amount >= MIN_PURCHASE_AMOUNT && amount <= MAX_PURCHASE_AMOUNT && hasSufficientBalance() && user;
 
   const handleBuy = async () => {
+    if (!address) {
+      toast({ title: 'Please connect your wallet first.', variant: 'destructive' });
+      return;
+    }
+    if (isWrongNetwork) {
+      switchChain?.({ chainId: polygon.id });
+      return;
+    }
     if (!canPurchase || !firestore) {
       if (!firestore) toast({ title: 'Database not available.', variant: 'destructive' });
-      else if (!address) toast({ title: 'Please connect your wallet first.', variant: 'destructive' });
-      else if (isWrongNetwork) toast({ title: 'Please switch to Polygon network.', variant: 'destructive' });
       else if (!hasSufficientBalance()) toast({ title: 'Insufficient balance.', variant: 'destructive' });
       return;
     }
@@ -69,10 +86,11 @@ export function BuyForm() {
 
     try {
       let hash;
+      const chainId = chain.id;
       if (paymentMethod === 'USDT') {
-        hash = await buyWithUSDT(firestore, amount, usdtAmount, address, chainId!);
+        hash = await buyWithUSDT(firestore, amount, usdtAmount, address, chainId);
       } else {
-        hash = await buyWithMatic(firestore, amount, maticAmount, address, chainId!);
+        hash = await buyWithMatic(firestore, amount, maticAmount, address, chainId);
       }
       setTxHash(hash);
       setPurchaseState('success');
@@ -103,7 +121,7 @@ export function BuyForm() {
           <CardDescription>Connect your wallet to begin the purchase process.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={connectWallet} className="w-full">
+          <Button onClick={() => open()} className="w-full">
             <Wallet className="mr-2 h-4 w-4" />
             Connect Wallet
           </Button>
@@ -194,7 +212,7 @@ export function BuyForm() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Your Balance</span>
                   <span>
-                    {getBalance() === null ? <Skeleton className="h-5 w-20" /> : `${getBalance()?.toFixed(4)} ${paymentMethod}`}
+                    {getBalance() === undefined ? <Skeleton className="h-5 w-20" /> : `${parseFloat(getBalance()!.formatted).toFixed(4)} ${getBalance()?.symbol}`}
                   </span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg">
@@ -213,7 +231,7 @@ export function BuyForm() {
                 </div>
               </CardContent>
             </Card>
-             {!hasSufficientBalance() && amount > 0 && (
+             {getBalance() !== undefined && !hasSufficientBalance() && amount > 0 && (
                 <Alert variant="destructive" className="text-xs">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Insufficient Balance</AlertTitle>

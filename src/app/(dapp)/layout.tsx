@@ -1,6 +1,6 @@
-import { WalletProvider } from '@/context/wallet-provider';
 import { Header } from '@/components/layout/header';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { Web3ModalProvider } from '@/context/web3modal-provider';
 
 export default function DappLayout({
   children,
@@ -9,12 +9,12 @@ export default function DappLayout({
 }) {
   return (
     <FirebaseClientProvider>
-      <WalletProvider>
+      <Web3ModalProvider>
         <div className="relative flex min-h-screen flex-col">
           <Header />
           <main className="flex-1">{children}</main>
         </div>
-      </WalletProvider>
+      </Web3ModalProvider>
     </FirebaseClientProvider>
   );
 }
