@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14191a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CS Coding Task">
+<title>Reaction Times Programming Task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=Libre+Franklin:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128187;</text></svg>">
+<style>
+/* Layout: tabbed single column — brief, then a full-height editor with a console drawer. */
+:root{
+  --paper:#f7f6f2; --surface:#ffffff; --ink:#1c2321; --ink-soft:#5d6a66;
+  --rule:#ddded7; --accent:#0d6b5f; --accent-soft:#e3efec; --flag:#b4621a;
+  --bad:#a32f2f; --good:#0d6b5f; --focus:#0d6b5f; --console:#10201e; --console-ink:#d8e8e3;
+  color-scheme:light;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14191a; --surface:#1b2223; --ink:#e9ece9; --ink-soft:#97a4a0;
+    --rule:#2d3738; --accent:#4fcbb4; --accent-soft:#1d3733; --flag:#e09a5b;
+    --bad:#f08a7e; --good:#4fcbb4; --focus:#4fcbb4; --console:#0d1415; --console-ink:#d8e8e3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14191a; --surface:#1b2223; --ink:#e9ece9; --ink-soft:#97a4a0;
+  --rule:#2d3738; --accent:#4fcbb4; --accent-soft:#1d3733; --flag:#e09a5b;
+  --bad:#f08a7e; --good:#4fcbb4; --focus:#4fcbb4; --console:#0d1415; --console-ink:#d8e8e3;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-size:14px;
+  font-family:"Libre Franklin",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%;overflow:hidden}
+img{max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+:where(button,input,textarea,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+.screen{display:flex;flex-direction:column;height:100%;max-width:52rem;margin:0 auto;width:100%}
+.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin:0}
+h1{font-family:Spectral,Georgia,serif;font-weight:600;font-size:clamp(1.5rem,5.5vw,2.1rem);line-height:1.15;text-wrap:balance;margin:.5rem 0 .25rem}
+h2{font-family:Spectral,Georgia,serif;font-weight:600;font-size:1.05rem;margin:1.4rem 0 .4rem}
+.sub{color:var(--ink-soft);font-size:.95rem;margin:0 0 1.4rem}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:var(--accent);
+  color:var(--paper);border:0;border-radius:10px;padding:.9rem 1.3rem;font-weight:600;font-size:1rem;
+  cursor:pointer;width:100%;-webkit-appearance:none}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
+.btn + .btn{margin-top:.6rem}
+.namefield{display:block;margin:1.3rem 0 1rem}
+.namefield span{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:600;margin-bottom:.4rem}
+.namefield input{width:100%;padding:.8rem .9rem;border-radius:9px;border:1px solid var(--rule);
+  background:var(--paper);color:var(--ink);font:inherit;-webkit-appearance:none}
+
+/* ---------- brief ---------- */
+#brief{overflow-y:auto;padding:0 16px;padding-block:clamp(20px,5vh,44px)}
+.release{border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:8px;
+  background:var(--surface);padding:14px 16px;font-size:.92rem;line-height:1.6}
+.release p{margin:0 0 .7rem}
+.release p:last-child{margin-bottom:0}
+.task{border-top:1px solid var(--rule);padding-top:.9rem;margin-top:.9rem}
+.task h3{font-size:.95rem;margin:0 0 .35rem;font-weight:700}
+.task ul{margin:.4rem 0 0;padding-left:1.1rem;color:var(--ink-soft)}
+.task li{margin-bottom:.25rem}
+.reqs{margin:.6rem 0 0;padding-left:1.1rem;color:var(--ink-soft);font-size:.9rem;line-height:1.6}
+.note{font-size:.85rem;color:var(--ink-soft);line-height:1.6}
+
+/* ---------- workspace ---------- */
+#work{display:none}
+#work.on{display:flex}
+header.bar{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--rule);padding:9px 14px}
+.barrow{display:flex;align-items:center;justify-content:space-between;gap:.7rem;font-size:.78rem;color:var(--ink-soft)}
+.barrow .who{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clock{font-variant-numeric:tabular-nums;font-family:"JetBrains Mono",monospace}
+.tabs{display:flex;gap:.35rem;margin-top:.55rem}
+.tab{flex:1;background:transparent;border:1px solid var(--rule);border-radius:8px;padding:.4rem .2rem;
+  font-size:.78rem;font-weight:600;cursor:pointer;color:var(--ink-soft)}
+.tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+
+.pane{flex:1;display:flex;flex-direction:column;min-height:0}
+.pane[hidden]{display:none}
+#editorPane{padding:10px 14px 0}
+.lbl{display:flex;align-items:center;justify-content:space-between;font-size:.7rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin:0 0 .35rem}
+.lbl .count{letter-spacing:0;text-transform:none;font-weight:500}
+textarea{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--rule);
+  border-radius:10px;padding:.7rem .8rem;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  font-size:13px;line-height:1.55;resize:none;-webkit-appearance:none;tab-size:4}
+#code{flex:1;min-height:0}
+#stdin{height:5.2rem;margin-bottom:.5rem}
+#specPane,#consolePane{overflow-y:auto;padding:14px}
+
+.runbar{display:flex;gap:.5rem;padding:10px 14px;border-top:1px solid var(--rule);background:var(--paper)}
+.runbar .btn{width:auto;flex:1;margin:0;padding:.75rem 1rem}
+.console{background:var(--console);color:var(--console-ink);border-radius:10px;padding:.8rem;
+  font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.55;
+  white-space:pre-wrap;word-break:break-word;min-height:8rem;max-height:100%;overflow:auto;margin:0}
+.console .err{color:#ff9b8f}
+.console .ok{color:#7fe3c8}
+.console .dim{opacity:.6}
+.status{font-size:.8rem;color:var(--ink-soft);margin:.6rem 0 0}
+
+/* ---------- done ---------- */
+#done{display:none;overflow-y:auto;padding:0 16px;padding-block:clamp(24px,6vh,56px);justify-content:center}
+#done.on{display:flex}
+.tick{width:3rem;height:3rem;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;font-size:1.5rem;margin-bottom:1rem}
+.code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.7rem;line-height:1.5;
+  background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:.7rem;
+  max-height:7rem;overflow:auto;word-break:break-all;user-select:all;-webkit-user-select:all;margin:.6rem 0 .8rem}
+.muted{color:var(--ink-soft);font-size:.85rem;line-height:1.6}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ BRIEF ============ -->
+<div class="screen" id="brief">
+  <p class="eyebrow">Cambridge IGCSE / O Level &middot; 0478/22</p>
+  <h1>Reaction Times<br>Programming Task</h1>
+  <p class="sub">Pre-release practical &middot; prepared for Riyanssh Khanduja</p>
+
+  <div class="release">
+    <p><strong>Pre-release material.</strong> An experiment has taken place which measures the reaction speeds of students. Each student is aged from 12 to 16, and belongs to a school house (Saturn or Mars). A program is required to store the age, school house and reaction time of each student in the school. There are 650 students in the school. The program should be able to output the reaction times of different student groups.</p>
+    <p>Write and test a program for the school.</p>
+
+    <div class="task">
+      <h3>Task 1 &mdash; Set up arrays and store records</h3>
+      <p class="note">Set up one-dimensional arrays for the whole school to store the age of each student in whole years, the school house of each student, and the reaction time of each student. Input and store the records for an appropriate sample of students. Inputs must be validated on entry and any invalid inputs rejected.</p>
+    </div>
+
+    <div class="task">
+      <h3>Task 2 &mdash; Output school house based statistics</h3>
+      <p class="note">Using your sample, calculate and output the average reaction times for students in Saturn and students in Mars.</p>
+    </div>
+
+    <div class="task">
+      <h3>Task 3 &mdash; Output statistics based on user input</h3>
+      <p class="note">Extend your program to prompt users to input a specific age and school house. Using only records that match the criteria input, the program should identify, calculate and output the average reaction time and the slowest reaction time. The output should include a suitable message for each of the reaction times identified.</p>
+    </div>
+  </div>
+
+  <h2>How you are marked</h2>
+  <ul class="reqs">
+    <li>Your program must include appropriate prompts for the entry of data.</li>
+    <li>Error messages and other output need to be set out clearly.</li>
+    <li>All variables, constants and other identifiers must have meaningful names.</li>
+    <li>Each task must be fully tested — use the Inputs box to run your own test data.</li>
+  </ul>
+
+  <h2>Rules</h2>
+  <ul class="reqs">
+    <li><strong>Write every line yourself.</strong> Pasting into the editor is blocked, and paste attempts are recorded in your submission.</li>
+    <li>You may run your program as often as you like. You will see Python's own error messages — that is part of debugging.</li>
+    <li>You will not be told your mark. Your code is graded after you submit, on whether it runs, its syntax, and its logic.</li>
+    <li>Your work saves on this device as you type, so you can close the page and come back.</li>
+  </ul>
+
+  <label class="namefield" for="who"><span>Candidate name</span>
+    <input id="who" type="text" value="Riyanssh Khanduja" autocomplete="name" spellcheck="false">
+  </label>
+  <button class="btn" id="go">Start the task</button>
+  <p class="muted" id="resumeNote" style="text-align:center;margin-top:1rem" hidden></p>
+</div>
+
+<!-- ============ WORKSPACE ============ -->
+<div class="screen" id="work">
+  <header class="bar">
+    <div class="barrow">
+      <span class="who" id="whoLabel"></span>
+      <span class="clock" id="clock">00:00</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tabCode"    role="tab" aria-selected="true">Program</button>
+      <button class="tab" id="tabSpec"    role="tab" aria-selected="false">Task</button>
+      <button class="tab" id="tabConsole" role="tab" aria-selected="false">Output</button>
+    </div>
+  </header>
+
+  <div class="pane" id="editorPane">
+    <p class="lbl">Inputs for this run <span class="count">one value per line</span></p>
+    <textarea id="stdin" spellcheck="false" autocapitalize="off" autocorrect="off"
+      placeholder="14&#10;Saturn&#10;0.25"></textarea>
+    <p class="lbl">Your program <span class="count" id="lineCount">0 lines</span></p>
+    <textarea id="code" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"
+      placeholder="# Write your Python program here."></textarea>
+  </div>
+
+  <div class="pane" id="specPane" hidden>
+    <p class="eyebrow">The task</p>
+    <h2 style="margin-top:.4rem">Reaction times</h2>
+    <p class="note">Students aged 12 to 16, each in house Saturn or Mars, each with a reaction time. 650 students in the school.</p>
+    <div class="task"><h3>Task 1 &mdash; Arrays and records</h3>
+      <p class="note">One-dimensional arrays for age, house and reaction time. Input and store an appropriate sample. Validate on entry and reject invalid inputs.</p></div>
+    <div class="task"><h3>Task 2 &mdash; House statistics</h3>
+      <p class="note">Calculate and output the average reaction time for Saturn and for Mars.</p></div>
+    <div class="task"><h3>Task 3 &mdash; Statistics on user input</h3>
+      <p class="note">Prompt for an age and a house. Using only matching records, output the average reaction time and the slowest reaction time, each with a suitable message.</p></div>
+    <p class="note" style="margin-top:1rem">Prompts for data entry, clear error messages, meaningful identifier names.</p>
+  </div>
+
+  <div class="pane" id="consolePane" hidden>
+    <p class="lbl">Output</p>
+    <pre class="console" id="out"><span class="dim">Press Run to execute your program.</span></pre>
+    <p class="status" id="status"></p>
+  </div>
+
+  <div class="runbar">
+    <button class="btn ghost" id="runBtn">Run</button>
+    <button class="btn" id="finishBtn">Submit</button>
+  </div>
+</div>
+
+<!-- ============ DONE ============ -->
+<div class="screen" id="done">
+  <div class="tick" aria-hidden="true">&#10003;</div>
+  <h1>Task submitted</h1>
+  <p class="sub" id="doneSub"></p>
+  <div class="card">
+    <p class="eyebrow">Result code</p>
+    <p class="muted" style="margin:.5rem 0 0">Send this to your teacher. It contains your program and the checks that were run on it.</p>
+    <div class="code" id="codeOut"></div>
+    <button class="btn" id="share">Send result code</button>
+    <button class="btn ghost" id="copy">Copy result code</button>
+  </div>
+  <p class="muted" style="text-align:center;margin-top:1rem">You can close this page once the code has been sent.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+var STORE = "cs-sem1-code-v1";
+var $ = function(id){ return document.getElementById(id); };
+var S = null, pyodide = null, pyLoading = null, pastes = 0, runs = 0, tick = null;
+
+/* ---------- persistence ---------- */
+function load(){ try{ var r=localStorage.getItem(STORE); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
+function fresh(name){
+  return { name:name, started:new Date().toISOString(), code:"", stdin:"", pastes:0, runs:0, submitted:false };
+}
+
+/* ---------- python harness ----------
+   The student's program runs with input() fed from the Inputs box, stdout captured,
+   and a statement counter that stops runaway loops. */
+var HARNESS = [
+"import sys, builtins, io, traceback, ast",
+"",
+"def _run(user_code, feed):",
+"    out = io.StringIO()",
+"    lines = [l for l in feed.split('\\n')]",
+"    if lines and lines[-1] == '': lines.pop()",
+"    it = iter(lines)",
+"    asked = [0]",
+"    def _input(prompt=''):",
+"        asked[0] += 1",
+"        try: v = next(it)",
+"        except StopIteration:",
+"            raise EOFError('The program asked for more input than the Inputs box supplied')",
+"        out.write(str(prompt) + str(v) + '\\n')",
+"        return str(v)",
+"    steps = [0]",
+"    def _trace(frame, event, arg):",
+"        steps[0] += 1",
+"        if steps[0] > 400000:",
+"            raise RuntimeError('Program stopped: it ran too long (check for an endless loop)')",
+"        return _trace",
+"    real_in, real_out = builtins.input, sys.stdout",
+"    builtins.input = _input",
+"    sys.stdout = out",
+"    err = ''",
+"    try:",
+"        code_obj = compile(user_code, 'your_program.py', 'exec')",
+"        sys.settrace(_trace)",
+"        exec(code_obj, {'__name__': '__main__'})",
+"    except SyntaxError as e:",
+"        err = 'SyntaxError: ' + (e.msg or '') + '  (line ' + str(e.lineno) + ')'",
+"        if e.text: err += '\\n    ' + e.text.rstrip()",
+"    except EOFError as e:",
+"        err = 'Ran out of input: ' + str(e)",
+"    except Exception as e:",
+"        tb = traceback.extract_tb(sys.exc_info()[2])",
+"        where = ''",
+"        for f in tb:",
+"            if f.filename == 'your_program.py':",
+"                where = '  (line ' + str(f.lineno) + ')'",
+"        err = type(e).__name__ + ': ' + str(e) + where",
+"    finally:",
+"        sys.settrace(None)",
+"        builtins.input = real_in",
+"        sys.stdout = real_out",
+"    return {'out': out.getvalue(), 'err': err, 'asked': asked[0]}",
+"",
+"def _analyse(src):",
+"    r = {'syntax_ok': True, 'syntax_error': '', 'lines': 0, 'comments': 0,",
+"         'lists': 0, 'for_loops': 0, 'while_loops': 0, 'ifs': 0, 'functions': 0,",
+"         'inputs': 0, 'prints': 0, 'uses_sum': False, 'uses_len': False, 'uses_max': False,",
+"         'uses_min': False, 'uses_append': False, 'uses_round': False,",
+"         'names_saturn': False, 'names_mars': False, 'short_names': [], 'identifiers': []}",
+"    body = [l for l in src.split('\\n') if l.strip()]",
+"    r['lines'] = len(body)",
+"    r['comments'] = len([l for l in body if l.strip().startswith('#')])",
+"    low = src.lower()",
+"    r['names_saturn'] = 'saturn' in low",
+"    r['names_mars'] = 'mars' in low",
+"    try:",
+"        tree = ast.parse(src)",
+"    except SyntaxError as e:",
+"        r['syntax_ok'] = False",
+"        r['syntax_error'] = (e.msg or '') + ' (line ' + str(e.lineno) + ')'",
+"        return r",
+"    names = set()",
+"    for n in ast.walk(tree):",
+"        if isinstance(n, (ast.List, ast.ListComp)): r['lists'] += 1",
+"        elif isinstance(n, ast.For): r['for_loops'] += 1",
+"        elif isinstance(n, ast.While): r['while_loops'] += 1",
+"        elif isinstance(n, ast.If): r['ifs'] += 1",
+"        elif isinstance(n, ast.FunctionDef): r['functions'] += 1; names.add(n.name)",
+"        elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store): names.add(n.id)",
+"        elif isinstance(n, ast.Call):",
+"            f = n.func",
+"            nm = f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else '')",
+"            if nm == 'input': r['inputs'] += 1",
+"            elif nm == 'print': r['prints'] += 1",
+"            elif nm == 'sum': r['uses_sum'] = True",
+"            elif nm == 'len': r['uses_len'] = True",
+"            elif nm == 'max': r['uses_max'] = True",
+"            elif nm == 'min': r['uses_min'] = True",
+"            elif nm == 'append': r['uses_append'] = True",
+"            elif nm == 'round': r['uses_round'] = True",
+"    r['identifiers'] = sorted(names)",
+"    r['short_names'] = sorted([x for x in names if len(x) <= 2])",
+"    return r",
+""].join("\n");
+
+function ensurePy(onProgress){
+  if (pyodide) return Promise.resolve(pyodide);
+  if (pyLoading) return pyLoading;
+  onProgress && onProgress("Starting Python… first run downloads the interpreter, this can take a minute.");
+  pyLoading = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" })
+    .then(function(py){ py.runPython(HARNESS); pyodide = py; return py; });
+  return pyLoading;
+}
+
+function show(kind, text){
+  var out = $("out");
+  out.textContent = "";
+  var span = document.createElement("span");
+  if (kind) span.className = kind;
+  span.textContent = text;
+  out.appendChild(span);
+}
+function append(kind, text){
+  var span = document.createElement("span");
+  if (kind) span.className = kind;
+  span.textContent = text;
+  $("out").appendChild(span);
+}
+
+function selectTab(which){
+  var map = { code:["tabCode","editorPane"], spec:["tabSpec","specPane"], console:["tabConsole","consolePane"] };
+  Object.keys(map).forEach(function(k){
+    var sel = k === which;
+    $(map[k][0]).setAttribute("aria-selected", sel ? "true" : "false");
+    $(map[k][1]).hidden = !sel;
+  });
+}
+$("tabCode").addEventListener("click", function(){ selectTab("code"); });
+$("tabSpec").addEventListener("click", function(){ selectTab("spec"); });
+$("tabConsole").addEventListener("click", function(){ selectTab("console"); });
+
+function runProgram(){
+  var src = $("code").value;
+  if (!src.trim()){ selectTab("console"); show("dim", "Nothing to run yet — write your program first."); return Promise.resolve(null); }
+  selectTab("console");
+  show("dim", "Running…");
+  $("runBtn").disabled = true;
+  return ensurePy(function(m){ show("dim", m); })
+    .then(function(py){
+      var res = py.runPython("_run")(src, $("stdin").value).toJs({dict_converter: Object.fromEntries});
+      runs++; S.runs = runs; save();
+      $("out").textContent = "";
+      if (res.out) append(null, res.out);
+      if (res.err){ append("err", (res.out ? "\n" : "") + res.err + "\n"); }
+      else { append("ok", (res.out ? "\n" : "") + "Program finished.\n"); }
+      if (!res.out && !res.err) append("dim", "(no output)\n");
+      $("status").textContent = "Run " + runs + " · " + res.asked + " input" + (res.asked === 1 ? "" : "s") + " used";
+      return res;
+    })
+    .catch(function(e){ show("err", "Could not start Python: " + e.message + "\n\nCheck your internet connection and try Run again."); return null; })
+    .then(function(r){ $("runBtn").disabled = false; return r; });
+}
+$("runBtn").addEventListener("click", runProgram);
+
+/* ---------- editor ---------- */
+var codeEl = $("code");
+codeEl.addEventListener("paste", function(e){
+  e.preventDefault();
+  pastes++; S.pastes = pastes; save();
+  selectTab("console");
+  show("err", "Pasting is turned off for this task. Type your program yourself.\n(Paste attempts so far: " + pastes + ")");
+});
+codeEl.addEventListener("drop", function(e){ e.preventDefault(); });
+codeEl.addEventListener("keydown", function(e){
+  if (e.key === "Tab"){
+    e.preventDefault();
+    var s = this.selectionStart, en = this.selectionEnd;
+    this.value = this.value.slice(0, s) + "    " + this.value.slice(en);
+    this.selectionStart = this.selectionEnd = s + 4;
+  }
+});
+function syncCode(){
+  S.code = codeEl.value; S.stdin = $("stdin").value; save();
+  var n = codeEl.value ? codeEl.value.split("\n").length : 0;
+  $("lineCount").textContent = n + " line" + (n === 1 ? "" : "s");
+}
+codeEl.addEventListener("input", syncCode);
+$("stdin").addEventListener("input", syncCode);
+
+/* ---------- clock ---------- */
+function startClock(){
+  if (tick) clearInterval(tick);
+  tick = setInterval(function(){
+    var ms = Date.now() - new Date(S.started).getTime();
+    var m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60;
+    $("clock").textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }, 1000);
+}
+
+/* ---------- start ---------- */
+$("go").addEventListener("click", function(){
+  var name = $("who").value.trim() || "Candidate";
+  if (!S || S.submitted || S.name !== name) S = fresh(name);
+  codeEl.value = S.code || ""; $("stdin").value = S.stdin || "";
+  pastes = S.pastes || 0; runs = S.runs || 0;
+  save();
+  $("whoLabel").textContent = S.name;
+  $("brief").style.display = "none";
+  $("work").classList.add("on");
+  syncCode(); startClock(); selectTab("code");
+  ensurePy(function(){});           // warm the interpreter in the background
+});
+
+/* ---------- submit ---------- */
+var confirming = false;
+$("finishBtn").addEventListener("click", function(){
+  var self = this;
+  if (!confirming){
+    confirming = true;
+    self.textContent = "Submit for marking?";
+    setTimeout(function(){ if (confirming){ confirming = false; self.textContent = "Submit"; } }, 6000);
+    return;
+  }
+  finish();
+});
+
+function gzip64(str){
+  if (!(window.CompressionStream)) return Promise.resolve("C0:" + b64(str));
+  var cs = new CompressionStream("gzip");
+  var w = cs.writable.getWriter();
+  w.write(new TextEncoder().encode(str)); w.close();
+  return new Response(cs.readable).arrayBuffer().then(function(buf){
+    var bytes = new Uint8Array(buf), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return "C1:" + btoa(bin).replace(/=+$/, "");
+  }).catch(function(){ return "C0:" + b64(str); });
+}
+function b64(s){ return btoa(unescape(encodeURIComponent(s))).replace(/=+$/, ""); }
+
+function finish(){
+  $("finishBtn").disabled = true;
+  var src = codeEl.value;
+  S.submitted = true; S.finished = new Date().toISOString(); save();
+
+  ensurePy(function(){}).then(function(py){
+    var stats = py.runPython("_analyse")(src).toJs({dict_converter: Object.fromEntries});
+    var res = py.runPython("_run")(src, $("stdin").value).toJs({dict_converter: Object.fromEntries});
+    return { stats: stats, run: res };
+  }).catch(function(){
+    return { stats: null, run: null };
+  }).then(function(checks){
+    var mins = Math.max(1, Math.round((new Date(S.finished) - new Date(S.started)) / 60000));
+    var payload = {
+      v: 1, kind: "code", task: "0478/22/F/M/17 pre-release — reaction times",
+      name: S.name, start: S.started, end: S.finished, mins: mins,
+      pastes: pastes, runs: runs, code: src, checks: checks
+    };
+    return gzip64(JSON.stringify(payload)).then(function(code){
+      if (tick) clearInterval(tick);
+      $("work").classList.remove("on");
+      $("brief").style.display = "none";
+      $("done").classList.add("on");
+      $("doneSub").textContent = S.name + " — " + (src.split("\n").length) + " lines, " +
+        runs + " test run" + (runs === 1 ? "" : "s") + ", about " + mins + " minute" + (mins === 1 ? "" : "s") + ".";
+      $("codeOut").textContent = code;
+      var shareBtn = $("share");
+      if (!navigator.share) shareBtn.hidden = true;
+      shareBtn.addEventListener("click", function(){
+        navigator.share({ title: "CS programming task", text: S.name + " — result code:\n\n" + code }).catch(function(){});
+      });
+    });
+  });
+}
+
+$("copy").addEventListener("click", function(){
+  var self = this, txt = $("codeOut").textContent;
+  function ok(){ self.textContent = "Copied"; setTimeout(function(){ self.textContent = "Copy result code"; }, 2000); }
+  function selectCode(){
+    var r = document.createRange(); r.selectNodeContents($("codeOut"));
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    self.textContent = "Selected — hold to copy";
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, selectCode);
+  else selectCode();
+});
+
+/* ---------- boot ---------- */
+(function(){
+  var prev = load();
+  if (prev && !prev.submitted){
+    S = prev;
+    $("who").value = prev.name;
+    var n = $("resumeNote"); n.hidden = false;
+    var ln = prev.code ? prev.code.split("\n").length : 0;
+    n.textContent = "Work in progress — " + ln + " line" + (ln === 1 ? "" : "s") + " saved. Starting picks up where you left off.";
+    $("go").textContent = "Resume the task";
+  } else {
+    S = fresh("Riyanssh Khanduja");
+  }
+})();
+</script>
+</body>
+</html>
