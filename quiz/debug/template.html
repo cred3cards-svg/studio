@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14181c" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Debug Lab">
+<title>Debug Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=Libre+Franklin:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#128027;</text></svg>">
+<style>
+/* Layout: one level per screen — diagnose phase then repair phase, fixed action bar. */
+:root{
+  --paper:#f6f5f1; --surface:#ffffff; --ink:#191f24; --ink-soft:#5a6672;
+  --rule:#dcdcd4; --accent:#1b4f8f; --accent-soft:#e2ebf6; --warn:#9a5b12;
+  --bad:#a52f2f; --good:#15715c; --focus:#1b4f8f; --console:#131b22; --console-ink:#dce6ef;
+  --on-accent:#ffffff;
+  color-scheme:light;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14181c; --surface:#1c2228; --ink:#e8ecf0; --ink-soft:#95a3b0;
+    --rule:#2c343c; --accent:#78b4f0; --accent-soft:#1a2c3f; --warn:#e3a35e;
+    --bad:#f28b80; --good:#5ec9ab; --focus:#78b4f0; --console:#0e1419; --console-ink:#dce6ef;
+    --on-accent:#0e1419;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14181c; --surface:#1c2228; --ink:#e8ecf0; --ink-soft:#95a3b0;
+  --rule:#2c343c; --accent:#78b4f0; --accent-soft:#1a2c3f; --warn:#e3a35e;
+  --bad:#f28b80; --good:#5ec9ab; --focus:#78b4f0; --console:#0e1419; --console-ink:#dce6ef;
+    --on-accent:#0e1419;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-size:14px;
+  font-family:"Libre Franklin",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%;overflow:hidden}
+img{max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+:where(button,input,textarea,[tabindex]):focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+
+.screen{display:flex;flex-direction:column;height:100%;max-width:52rem;margin:0 auto;width:100%}
+.eyebrow{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin:0}
+h1{font-family:Spectral,Georgia,serif;font-weight:600;font-size:clamp(1.5rem,5.5vw,2.1rem);line-height:1.15;text-wrap:balance;margin:.5rem 0 .25rem}
+.sub{color:var(--ink-soft);font-size:.95rem;margin:0 0 1.4rem}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px}
+.muted{color:var(--ink-soft);font-size:.85rem;line-height:1.6}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:var(--accent);
+  color:var(--on-accent);border:0;border-radius:10px;padding:.9rem 1.3rem;font-weight:600;font-size:1rem;
+  cursor:pointer;width:100%;-webkit-appearance:none}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
+.btn + .btn{margin-top:.6rem}
+
+#intro{overflow-y:auto;padding:0 16px;padding-block:clamp(20px,5vh,44px)}
+.rules{margin:1rem 0 1.4rem;padding-left:1.1rem;color:var(--ink-soft);font-size:.9rem;line-height:1.65}
+.rules li{margin-bottom:.4rem}
+.rules b{color:var(--ink)}
+.namefield{display:block;margin:1.3rem 0 1rem}
+.namefield span{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-soft);font-weight:600;margin-bottom:.4rem}
+.namefield input{width:100%;padding:.8rem .9rem;border-radius:9px;border:1px solid var(--rule);
+  background:var(--paper);color:var(--ink);font:inherit;-webkit-appearance:none}
+
+/* ---------- lab ---------- */
+#lab{display:none}
+#lab.on{display:flex}
+header.bar{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--rule);padding:9px 14px}
+.barrow{display:flex;align-items:center;justify-content:space-between;gap:.7rem;font-size:.78rem;color:var(--ink-soft)}
+.barrow strong{color:var(--ink)}
+.clock{font-variant-numeric:tabular-nums;font-family:"JetBrains Mono",monospace}
+.track{height:3px;background:var(--rule);border-radius:2px;margin-top:8px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s ease}
+.phasepill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;
+  padding:.15rem .6rem;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+main.body{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+h2.lvl{font-family:Spectral,Georgia,serif;font-size:1.2rem;margin:.5rem 0 .3rem}
+.brief{color:var(--ink-soft);font-size:.9rem;line-height:1.6;margin:0 0 1rem}
+
+.codebox{background:var(--surface);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-bottom:1rem}
+.cl{display:flex;align-items:flex-start;gap:.7rem;padding:.2rem .6rem;cursor:pointer;
+  font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.6;
+  border-left:3px solid transparent}
+.cl:hover{background:var(--accent-soft)}
+.cl .n{flex:none;width:1.6rem;text-align:right;color:var(--ink-soft);user-select:none;font-variant-numeric:tabular-nums}
+.cl .t{white-space:pre-wrap;word-break:break-word;min-width:0}
+.cl.sel{background:var(--accent-soft);border-left-color:var(--accent)}
+.cl.sel .n{color:var(--accent);font-weight:700}
+.codebox.static .cl{cursor:default}
+.codebox.static .cl:hover{background:transparent}
+
+.lbl{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin:0 0 .45rem}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));gap:.45rem;margin-bottom:1rem}
+.cat{background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:.6rem .5rem;
+  cursor:pointer;text-align:left;line-height:1.3}
+.cat b{display:block;font-size:.84rem;font-weight:700}
+.cat span{display:block;font-size:.7rem;color:var(--ink-soft);margin-top:.1rem}
+.cat[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+
+textarea{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--rule);
+  border-radius:10px;padding:.7rem .8rem;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  font-size:12.5px;line-height:1.6;resize:vertical;-webkit-appearance:none;tab-size:4;min-height:11rem}
+
+.result{border:1px solid var(--rule);border-radius:10px;padding:.7rem .8rem;margin-bottom:.55rem;background:var(--surface)}
+.result .head{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.85rem}
+.result .dot{width:.6rem;height:.6rem;border-radius:50%;flex:none}
+.result.pass .dot{background:var(--good)}
+.result.fail .dot{background:var(--bad)}
+.result.skip .dot{background:var(--warn)}
+.result.pass .head{color:var(--good)}
+.result.fail .head{color:var(--bad)}
+.result.skip .head{color:var(--warn)}
+.result .req{font-size:.82rem;color:var(--ink-soft);margin:.35rem 0 0;line-height:1.5}
+.result pre{background:var(--console);color:var(--console-ink);border-radius:7px;padding:.55rem .6rem;
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;line-height:1.5;
+  white-space:pre-wrap;word-break:break-word;margin:.45rem 0 0;max-height:9rem;overflow:auto}
+.banner{border-radius:10px;padding:.7rem .8rem;font-size:.86rem;font-weight:600;margin-bottom:.8rem;line-height:1.5}
+.banner.ok{background:var(--accent-soft);color:var(--good)}
+.banner.no{background:var(--accent-soft);color:var(--bad)}
+
+footer.actions{border-top:1px solid var(--rule);background:var(--paper);padding:10px 14px;display:flex;gap:.4rem}
+footer.actions .btn{width:auto;flex:1;margin:0;padding:.8rem .4rem;font-size:.9rem;white-space:nowrap}
+
+#done{display:none;overflow-y:auto;padding:0 16px;padding-block:clamp(24px,6vh,56px)}
+#done.on{display:flex}
+.tick{width:3rem;height:3rem;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;font-size:1.5rem;margin-bottom:1rem}
+.code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.7rem;line-height:1.5;
+  background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:.7rem;
+  max-height:7rem;overflow:auto;word-break:break-all;user-select:all;-webkit-user-select:all;margin:.6rem 0 .8rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--paper);padding:.6rem 1rem;border-radius:999px;font-size:.85rem;
+  font-weight:600;z-index:40;max-width:calc(100vw - 32px);text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="screen" id="intro">
+  <p class="eyebrow">Cambridge IGCSE / O Level &middot; Computer Science</p>
+  <h1>Debug Lab</h1>
+  <p class="sub">Ten broken programs &middot; prepared for Riyanssh Khanduja</p>
+
+  <div class="card">
+    <p class="muted" style="margin:0">Every program below is broken in exactly one place. They all come from the
+    reaction-times scenario: ages 12 to 16, houses Saturn and Mars, reaction times in seconds.</p>
+  </div>
+
+  <h2 style="font-family:Spectral,Georgia,serif;font-size:1.05rem;margin:1.4rem 0 .3rem">Each level has two phases</h2>
+  <ul class="rules">
+    <li><b>Diagnose.</b> Read the program and decide what kind of error it has, then tap the one line that is wrong.
+      You are not told whether you were right — this part is marked silently.</li>
+    <li><b>Repair.</b> Fix the code and run the hidden tests. You see which tests failed, the inputs they used and
+      what your program printed, but never the expected answer. Work it out from the description.</li>
+  </ul>
+
+  <h2 style="font-family:Spectral,Georgia,serif;font-size:1.05rem;margin:1.4rem 0 .3rem">Rules</h2>
+  <ul class="rules">
+    <li>Every repair is counted. Fewer attempts scores higher, so read the error before you change anything.</li>
+    <li>After 3 attempts you may skip a level, but a skipped level scores nothing for the repair.</li>
+    <li>Pasting into the editor is blocked. Type your fixes.</li>
+    <li>Change only what is broken. Rewriting the whole program is not a repair.</li>
+    <li>You are never shown your score. It goes in the report.</li>
+  </ul>
+
+  <label class="namefield" for="who"><span>Candidate name</span>
+    <input id="who" type="text" value="Riyanssh Khanduja" autocomplete="name" spellcheck="false">
+  </label>
+  <button class="btn" id="go">Start the lab</button>
+  <p class="muted" id="resumeNote" style="text-align:center;margin-top:1rem" hidden></p>
+</div>
+
+<div class="screen" id="lab">
+  <header class="bar">
+    <div class="barrow">
+      <span><strong id="lvlNum">1</strong> of <span id="lvlTotal">10</span> &middot; <span class="phasepill" id="phase">Diagnose</span></span>
+      <span class="clock" id="clock">00:00</span>
+    </div>
+    <div class="track"><i id="fill"></i></div>
+  </header>
+
+  <main class="body" id="body">
+    <h2 class="lvl" id="lvlTitle"></h2>
+    <p class="brief" id="lvlBrief"></p>
+
+    <div id="diagnose">
+      <p class="lbl">1 &mdash; What kind of error is it?</p>
+      <div class="cats" id="cats"></div>
+      <p class="lbl">2 &mdash; Tap the line that is wrong</p>
+      <div class="codebox" id="codeView"></div>
+    </div>
+
+    <div id="repair" hidden>
+      <div id="banner"></div>
+      <p class="lbl">Fix the program</p>
+      <textarea id="editor" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off"></textarea>
+      <p class="lbl" style="margin-top:1rem">Test results</p>
+      <div id="results"><p class="muted" style="margin:0">Press Run tests to check your fix.</p></div>
+    </div>
+  </main>
+
+  <footer class="actions">
+    <button class="btn ghost" id="backBtn" hidden>Back to code</button>
+    <button class="btn ghost" id="skipBtn" hidden>Skip level</button>
+    <button class="btn" id="mainBtn">Submit diagnosis</button>
+  </footer>
+</div>
+
+<div class="screen" id="done">
+  <div class="tick" aria-hidden="true">&#10003;</div>
+  <h1>Lab complete</h1>
+  <p class="sub" id="doneSub"></p>
+  <div class="card">
+    <p class="eyebrow">Result code</p>
+    <p class="muted" style="margin:.5rem 0 0">Send this to your teacher. It holds your diagnoses, your repairs and every
+    fix you typed.</p>
+    <div class="code" id="codeOut"></div>
+    <button class="btn" id="share">Send to Dad</button>
+    <button class="btn ghost" id="copy">Copy result code</button>
+  </div>
+  <p class="muted" style="text-align:center;margin-top:1rem">You can close this page once the code has been sent.</p>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+/* Level bank, obfuscated so the fault lines and expected values are not in page source.
+   Obfuscation, not security — a determined reader can still recover it. */
+var BANK_B64 = "__BANK__";
+var CK = "rk-dbg-lab";
+function reveal(b64){
+  var bin = atob(b64), out = "";
+  for (var i = 0; i < bin.length; i++) out += String.fromCharCode(bin.charCodeAt(i) ^ CK.charCodeAt(i % CK.length));
+  return JSON.parse(decodeURIComponent(escape(out)));
+}
+var L = reveal(BANK_B64), N = L.length;
+var CATS = [
+  ["SYNTAX", "Syntax error",   "Python cannot read the line"],
+  ["NAME",   "Name error",     "a name Python does not know"],
+  ["TYPE",   "Type error",     "wrong kind of value used"],
+  ["INDEX",  "Index error",    "position outside the list"],
+  ["ZERO",   "Division by zero", "divided by nothing"],
+  ["LOGIC",  "Logic error",    "it runs, the answer is wrong"]
+];
+var STORE = "cs-debug-lab-v1";
+var $ = function(id){ return document.getElementById(id); };
+var S = null, pyodide = null, pyLoading = null, tick = null, toastTimer = null;
+
+var HARNESS = [
+"import sys, builtins, io, traceback",
+"",
+"def _run(user_code, feed):",
+"    out = io.StringIO()",
+"    lines = [l for l in feed.split('\\n')]",
+"    if lines and lines[-1] == '': lines.pop()",
+"    it = iter(lines)",
+"    def _input(prompt=''):",
+"        try: v = next(it)",
+"        except StopIteration:",
+"            raise EOFError('the program asked for more input than the test supplies')",
+"        out.write(str(prompt) + str(v) + '\\n')",
+"        return str(v)",
+"    steps = [0]",
+"    def _trace(frame, event, arg):",
+"        steps[0] += 1",
+"        if steps[0] > 300000:",
+"            raise RuntimeError('stopped: the program ran too long (endless loop?)')",
+"        return _trace",
+"    real_in, real_out = builtins.input, sys.stdout",
+"    builtins.input = _input",
+"    sys.stdout = out",
+"    err = ''",
+"    try:",
+"        code_obj = compile(user_code, 'program.py', 'exec')",
+"        sys.settrace(_trace)",
+"        exec(code_obj, {'__name__': '__main__'})",
+"    except SyntaxError as e:",
+"        err = 'SyntaxError: ' + (e.msg or '') + '  (line ' + str(e.lineno) + ')'",
+"    except EOFError as e:",
+"        err = 'Ran out of input: ' + str(e)",
+"    except Exception as e:",
+"        tb = traceback.extract_tb(sys.exc_info()[2])",
+"        where = ''",
+"        for f in tb:",
+"            if f.filename == 'program.py': where = '  (line ' + str(f.lineno) + ')'",
+"        err = type(e).__name__ + ': ' + str(e) + where",
+"    finally:",
+"        sys.settrace(None)",
+"        builtins.input = real_in",
+"        sys.stdout = real_out",
+"    return {'out': out.getvalue(), 'err': err}",
+""].join("\n");
+
+function ensurePy(onMsg){
+  if (pyodide) return Promise.resolve(pyodide);
+  if (pyLoading) return pyLoading;
+  onMsg && onMsg();
+  pyLoading = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" })
+    .then(function(py){ py.runPython(HARNESS); pyodide = py; return py; });
+  return pyLoading;
+}
+
+/* ---------- state ---------- */
+function load(){ try{ var r = localStorage.getItem(STORE); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
+function fresh(name){
+  return { name: name, started: new Date().toISOString(), i: 0, phase: "diagnose",
+           pastes: 0, submitted: false,
+           levels: L.map(function(l){ return { id: l.id, cat: null, line: null, attempts: 0,
+                                               passed: false, skipped: false, code: l.code }; }) };
+}
+function here(){ return S.levels[S.i]; }
+function lvl(){ return L[S.i]; }
+
+/* ---------- toast + clipboard ---------- */
+function toast(m){
+  var t = $("toast"); t.textContent = m; t.hidden = false;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+function copyText(text){
+  function legacy(){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    return navigator.clipboard.writeText(text).then(function(){ return true; }, function(){ return legacy(); });
+  return Promise.resolve(legacy());
+}
+
+/* ---------- rendering ---------- */
+function renderCats(){
+  var box = $("cats"); box.textContent = "";
+  CATS.forEach(function(c){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "cat";
+    b.setAttribute("aria-pressed", here().cat === c[0] ? "true" : "false");
+    var t = document.createElement("b"); t.textContent = c[1];
+    var s = document.createElement("span"); s.textContent = c[2];
+    b.appendChild(t); b.appendChild(s);
+    b.addEventListener("click", function(){ here().cat = c[0]; save(); renderCats(); });
+    box.appendChild(b);
+  });
+}
+function renderCode(){
+  var box = $("codeView"); box.textContent = ""; box.className = "codebox";
+  lvl().code.split("\n").forEach(function(text, idx){
+    var row = document.createElement("div");
+    row.className = "cl" + (here().line === idx + 1 ? " sel" : "");
+    var n = document.createElement("span"); n.className = "n"; n.textContent = idx + 1;
+    var t = document.createElement("span"); t.className = "t"; t.textContent = text || " ";
+    row.appendChild(n); row.appendChild(t);
+    row.addEventListener("click", function(){ here().line = idx + 1; save(); renderCode(); });
+    box.appendChild(row);
+  });
+}
+function renderHead(){
+  $("lvlNum").textContent = S.i + 1;
+  $("lvlTotal").textContent = N;
+  $("lvlTitle").textContent = "Level " + (S.i + 1) + " — " + lvl().title;
+  $("lvlBrief").textContent = lvl().brief;
+  $("phase").textContent = S.phase === "diagnose" ? "Diagnose" : "Repair";
+  var done = S.levels.filter(function(x){ return x.passed || x.skipped; }).length;
+  $("fill").style.width = (done / N * 100) + "%";
+}
+function showPhase(){
+  renderHead();
+  var diag = S.phase === "diagnose";
+  $("diagnose").hidden = !diag;
+  $("repair").hidden = diag;
+  $("backBtn").hidden = true;
+  $("skipBtn").hidden = diag || here().attempts < 3 || here().passed;
+  $("mainBtn").textContent = diag ? "Submit diagnosis"
+                                  : (here().passed ? (S.i === N - 1 ? "Finish" : "Next level") : "Run tests");
+  $("mainBtn").disabled = false;
+  if (diag){ renderCats(); renderCode(); }
+  else {
+    $("editor").value = here().code;
+    if (!here().attempts){
+      $("banner").className = ""; $("banner").textContent = "";
+      $("results").textContent = "";
+      var p = document.createElement("p"); p.className = "muted"; p.style.margin = "0";
+      p.textContent = "Press Run tests to check your fix.";
+      $("results").appendChild(p);
+    }
+  }
+  $("body").scrollTop = 0;
+}
+
+/* ---------- checks ---------- */
+function numbersIn(s){ return (s.match(/-?\d+\.?\d*/g) || []).map(Number); }
+function checkNeeds(res, need){
+  for (var i = 0; i < need.length; i++){
+    var c = need[i];
+    if (c[0] === "noerr" && res.err) return "it stopped with an error";
+    if (c[0] === "num" && !numbersIn(res.out).some(function(n){ return Math.abs(n - c[1]) < 0.01; }))
+      return "a number the task asks for is missing or wrong";
+    if (c[0] === "has" && res.out.indexOf(c[1]) === -1) return "expected message not printed";
+    if (c[0] === "nothas" && res.out.indexOf(c[1]) !== -1) return "printed a message it should not have";
+  }
+  return null;
+}
+function runTests(){
+  var src = $("editor").value;
+  here().code = src; save();
+  $("mainBtn").disabled = true;
+  $("results").textContent = "";
+  var p = document.createElement("p"); p.className = "muted"; p.style.margin = "0";
+  p.textContent = "Running…"; $("results").appendChild(p);
+
+  return ensurePy(function(){ p.textContent = "Starting Python — the first run downloads it, this can take a minute."; })
+    .then(function(py){
+      here().attempts++;
+      var out = [], allPass = true;
+      lvl().tests.forEach(function(t, idx){
+        var code = src, skipped = false;
+        if (t.patch) for (var k = 0; k < t.patch.length; k++){
+          if (code.indexOf(t.patch[k][0]) === -1){ skipped = true; break; }
+          code = code.split(t.patch[k][0]).join(t.patch[k][1]);
+        }
+        if (skipped){ out.push({ state: "skip", idx: idx, label: t.label }); return; }
+        var res = py.runPython("_run")(code, t.in).toJs({ dict_converter: Object.fromEntries });
+        var why = checkNeeds(res, t.need);
+        if (why) allPass = false;
+        out.push({ state: why ? "fail" : "pass", idx: idx, label: t.label, why: why, res: res, stdin: t.in });
+      });
+      here().passed = allPass;
+      save();
+      paintResults(out, allPass);
+      return allPass;
+    })
+    .catch(function(e){
+      $("results").textContent = "";
+      var q = document.createElement("p"); q.className = "muted";
+      q.textContent = "Could not start Python: " + e.message + " — check your connection and try again.";
+      $("results").appendChild(q);
+    })
+    .then(function(){ showPhase(); });
+}
+function paintResults(out, allPass){
+  var b = $("banner");
+  b.className = "banner " + (allPass ? "ok" : "no");
+  b.textContent = allPass
+    ? "All tests pass. Attempt " + here().attempts + "."
+    : "Not fixed yet. Attempt " + here().attempts + " — read the failures below.";
+  var box = $("results"); box.textContent = "";
+  out.forEach(function(r){
+    var d = document.createElement("div");
+    d.className = "result " + r.state;
+    var h = document.createElement("div"); h.className = "head";
+    var dot = document.createElement("span"); dot.className = "dot";
+    var label = document.createElement("span");
+    label.textContent = "Test " + (r.idx + 1) + " — " +
+      (r.state === "pass" ? "passed" : r.state === "skip" ? "could not be checked" : "failed");
+    h.appendChild(dot); h.appendChild(label);
+    d.appendChild(h);
+    var req = document.createElement("p"); req.className = "req";
+    req.textContent = r.state === "skip"
+      ? "This test changes the data in your program to make sure the answer is really calculated. Your rewrite changed those lines too much to check."
+      : r.label;
+    d.appendChild(req);
+    if (r.state === "fail"){
+      var why = document.createElement("p"); why.className = "req";
+      why.textContent = "What went wrong: " + r.why + ".";
+      d.appendChild(why);
+      var pre = document.createElement("pre");
+      pre.textContent = (r.stdin ? "Input supplied:\n" + r.stdin.replace(/\n$/, "") + "\n\n" : "") +
+        "Your program printed:\n" + (r.res.out || "(nothing)") + (r.res.err ? "\n" + r.res.err : "");
+      d.appendChild(pre);
+    }
+    box.appendChild(d);
+  });
+}
+
+/* ---------- actions ---------- */
+$("mainBtn").addEventListener("click", function(){
+  if (S.phase === "diagnose"){
+    if (!here().cat){ toast("Pick what kind of error it is"); return; }
+    if (!here().line){ toast("Tap the line that is wrong"); return; }
+    S.phase = "repair"; save(); showPhase();
+    return;
+  }
+  if (here().passed){ advance(); return; }
+  runTests();
+});
+$("skipBtn").addEventListener("click", function(){
+  here().skipped = true; here().code = $("editor").value; save(); advance();
+});
+function advance(){
+  if (S.i === N - 1){ finish(); return; }
+  S.i++; S.phase = "diagnose"; save(); showPhase();
+}
+
+var ed = $("editor");
+ed.addEventListener("paste", function(e){
+  e.preventDefault(); S.pastes++; save();
+  toast("Pasting is off — type your fix");
+});
+ed.addEventListener("drop", function(e){ e.preventDefault(); });
+ed.addEventListener("keydown", function(e){
+  if (e.key === "Tab"){
+    e.preventDefault();
+    var s = this.selectionStart, en = this.selectionEnd;
+    this.value = this.value.slice(0, s) + "    " + this.value.slice(en);
+    this.selectionStart = this.selectionEnd = s + 4;
+  }
+});
+ed.addEventListener("input", function(){ here().code = this.value; save(); });
+
+function startClock(){
+  if (tick) clearInterval(tick);
+  tick = setInterval(function(){
+    var ms = Date.now() - new Date(S.started).getTime();
+    var m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60;
+    $("clock").textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }, 1000);
+}
+
+$("go").addEventListener("click", function(){
+  var name = $("who").value.trim() || "Candidate";
+  if (!S || S.submitted || S.name !== name) S = fresh(name);
+  save();
+  $("intro").style.display = "none";
+  $("lab").classList.add("on");
+  startClock(); showPhase();
+  ensurePy(function(){});
+});
+
+/* ---------- finish ---------- */
+function b64(s){ return btoa(unescape(encodeURIComponent(s))).replace(/=+$/, ""); }
+function gzip64(str){
+  if (!window.CompressionStream) return Promise.resolve("D0:" + b64(str));
+  var cs = new CompressionStream("gzip"), w = cs.writable.getWriter();
+  w.write(new TextEncoder().encode(str)); w.close();
+  return new Response(cs.readable).arrayBuffer().then(function(buf){
+    var bytes = new Uint8Array(buf), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return "D1:" + btoa(bin).replace(/=+$/, "");
+  }).catch(function(){ return "D0:" + b64(str); });
+}
+function finish(){
+  S.submitted = true; S.finished = new Date().toISOString(); save();
+  if (tick) clearInterval(tick);
+  var mins = Math.max(1, Math.round((new Date(S.finished) - new Date(S.started)) / 60000));
+  var rows = S.levels.map(function(r, i){
+    return { id: L[i].id, title: L[i].title,
+             catGiven: r.cat, catRight: L[i].cat, catOk: r.cat === L[i].cat,
+             lineGiven: r.line, lineRight: L[i].line, lineOk: r.line === L[i].line,
+             attempts: r.attempts, passed: r.passed, skipped: r.skipped, code: r.code };
+  });
+  var payload = { v: 1, kind: "debuglab", task: "Debug Lab — reaction times",
+                  name: S.name, start: S.started, end: S.finished, mins: mins,
+                  pastes: S.pastes, rows: rows };
+  gzip64(JSON.stringify(payload)).then(function(code){
+    $("lab").classList.remove("on");
+    $("intro").style.display = "none";
+    $("done").classList.add("on");
+    var fixed = rows.filter(function(r){ return r.passed; }).length;
+    $("doneSub").textContent = S.name + " — " + N + " levels, " + fixed + " repaired, about " + mins +
+      " minute" + (mins === 1 ? "" : "s") + ".";
+    $("codeOut").textContent = code;
+    var msg = S.name + " — Debug Lab\nResult code:\n\n" + code;
+    $("share").addEventListener("click", function(){
+      copyText(msg).then(function(ok){
+        toast(ok ? "Copied — paste it to Dad" : "Could not copy — select the code above");
+        if (navigator.share) navigator.share({ title: "Debug Lab", text: msg }).catch(function(){});
+      });
+    });
+  });
+}
+$("copy").addEventListener("click", function(){
+  var self = this;
+  copyText($("codeOut").textContent).then(function(ok){
+    if (ok){ self.textContent = "Copied"; setTimeout(function(){ self.textContent = "Copy result code"; }, 2000); }
+    else {
+      var r = document.createRange(); r.selectNodeContents($("codeOut"));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      self.textContent = "Selected — hold to copy";
+    }
+  });
+});
+
+/* ---------- boot ---------- */
+(function(){
+  var prev = load();
+  if (prev && !prev.submitted && prev.levels && prev.levels.length === N){
+    S = prev;
+    $("who").value = prev.name;
+    var n = $("resumeNote"); n.hidden = false;
+    n.textContent = "Lab in progress — you were on level " + (prev.i + 1) + " of " + N + ".";
+    $("go").textContent = "Resume the lab";
+  } else {
+    S = fresh("Riyanssh Khanduja");
+  }
+})();
+</script>
+</body>
+</html>

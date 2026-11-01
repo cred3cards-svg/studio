@@ -67,3 +67,45 @@ node quiz/mark-code.js <resultCode>
 
 Prints the automated checks and the numbered source. Syntax and runtime errors
 are decided by Python itself; logic is graded by reading the program.
+
+---
+
+## Debug Lab
+
+Ten broken programs from the same reaction-times world, hardest-leaning on
+finding and naming errors rather than writing code.
+
+| | |
+|---|---|
+| **Debug Lab** | https://cred3cards-svg.github.io/studio/debug/ |
+
+Each level runs in two phases:
+
+- **Diagnose** — pick the error category (syntax, name, type, index, division by
+  zero, logic) and tap the one faulty line. The candidate is told nothing about
+  whether they were right; it is marked silently.
+- **Repair** — fix the code until hidden tests pass. Failures show the inputs
+  used and what the program printed, never the expected answer.
+
+Coverage: a missing colon, an unquoted string, a `for/else` that silently
+mis-totals, indexing a scalar, an off-by-one `range`, division by zero on an
+empty group, the wrong denominator in an average, an exclusive boundary where
+the spec says inclusive, `<` where `>` was meant, and an accumulator reset
+inside its own loop. Several were taken from mistakes made in the main task.
+
+Levels whose data is a list literal carry a second test that rewrites that
+literal before running, so an answer printed as a constant fails.
+
+`debug/template.html` plus `debug/levels.source.js` build `debug/index.html` via
+`node debug/build.js`; the level bank is XOR-obfuscated in the page so fault
+lines and expected values are not in page source.
+
+### Marking a Debug Lab submission
+
+```sh
+node quiz/mark-debug.js <resultCode>
+```
+
+Scores 4 marks of diagnosis and 6 of repair per level (fewer attempts scores
+higher), prints a level-by-level table, names where the candidate struggled,
+and lists the final code they typed for every level.
